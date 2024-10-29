@@ -4,6 +4,7 @@ from django.core.exceptions import ImproperlyConfigured
 env = environ.Env()
 
 BASE_DIR = environ.Path(__file__) - 2
+APPS_DIR = BASE_DIR.path("spotter")
 
 
 def env_to_enum(enum_cls, value):
@@ -12,12 +13,3 @@ def env_to_enum(enum_cls, value):
             return x
 
     raise ImproperlyConfigured(f"Env value {repr(value)} could not be found in {repr(enum_cls)}")
-
-
-# # environ config
-# ROOT = environ.Path(__file__) - 3  # get root of the project
-# env_file = os.path.join(ROOT, ".env")
-# environ.Env.read_env(env_file)
-#
-# # Build paths inside the project like this: BASE_DIR / 'subdir'.
-# BASE_DIR = Path(__file__).resolve().parent.parent.parent
