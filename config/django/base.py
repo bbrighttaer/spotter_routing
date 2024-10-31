@@ -110,6 +110,7 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "EXCEPTION_HANDLER": "spotter.core.exception_handlers.hacksoft_proposed_exception_handler",
     # "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S.%Z",
 }
 

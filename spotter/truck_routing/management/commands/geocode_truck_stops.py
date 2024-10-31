@@ -5,8 +5,8 @@ import tqdm
 from django.conf import settings
 from django.core.management import BaseCommand
 from requests import HTTPError
-from rest_framework.exceptions import APIException
 
+from spotter.core.exceptions import ApplicationError
 from spotter.truck_routing.models import TruckStop
 from spotter.truck_routing.services import here_maps
 
@@ -40,7 +40,7 @@ class Command(BaseCommand):
                 map_items = here_maps.geocode(
                     q=f"{truck_stop_name}, {city}, {state_code}"
                 )
-            except (HTTPError, APIException) as e:
+            except (HTTPError, ApplicationError) as e:
                 failed_truck_stops.append((truck_stop_name, str(e)))
             else:
                 selected_location = None

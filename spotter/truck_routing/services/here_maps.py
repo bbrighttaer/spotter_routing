@@ -1,8 +1,8 @@
 import requests
 from rest_framework import status
-from rest_framework.exceptions import APIException
 
 from config.env import env
+from spotter.core.exceptions import ApplicationError
 
 API_KEY = env.str("HERE_MAP_KEY")
 
@@ -27,9 +27,9 @@ def geocode(q: str, country_code="USA") -> list:
 
     if status.is_client_error(response.status_code):
         error_data = response.json()
-        raise APIException(
-            detail=error_data.get("cause") or error_data.get("error"),
-            code=error_data.get("code"),
+        raise ApplicationError(
+            message=error_data.get("cause") or error_data.get("error"),
+            extra=error_data.get("code"),
         )
 
     # raise exception if not ok
