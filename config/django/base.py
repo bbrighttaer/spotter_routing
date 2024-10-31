@@ -107,6 +107,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    # "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S.%Z",
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
