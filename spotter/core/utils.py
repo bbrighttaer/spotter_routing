@@ -1,6 +1,16 @@
 import re
+from typing import TypedDict, TypeVar
 
 from spotter.core.exceptions import ApplicationError
+
+
+class _WGS84(TypedDict):
+    latitude: float
+    longitude: float
+
+
+# Custom type constrained to WGS84 format
+WGS84Type = TypeVar("WGS84Type", bound=_WGS84)
 
 
 class ValidateWGS84Value:

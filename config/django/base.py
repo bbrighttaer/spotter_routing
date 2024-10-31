@@ -30,7 +30,6 @@ DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 LOCAL_APPS = [
     "spotter.truck_routing.apps.TruckRoutingConfig",
@@ -38,6 +37,7 @@ LOCAL_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    "corsheaders",
     "rest_framework",
 ]
 
@@ -55,6 +55,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -82,12 +83,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {"default": env.db("DATABASE_URL")}
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -114,7 +113,6 @@ REST_FRAMEWORK = {
     # "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S.%Z",
 }
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
@@ -125,7 +123,6 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
