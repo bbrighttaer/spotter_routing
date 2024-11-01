@@ -1,6 +1,6 @@
 import pytest
 
-from spotter.truck_routing.services import here_maps
+from spotter.vehicle_routing.services import here_maps
 
 
 @pytest.mark.parametrize("query", [("WOODSHED OF BIG CABIN",), ("KWIK TRIP #796",)])

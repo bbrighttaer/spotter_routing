@@ -1,9 +1,9 @@
 from collections import defaultdict
 
 from spotter.core import constants
-from spotter.truck_routing.models import TruckStop
-from spotter.truck_routing.serializers import TruckStopSerializer
-from spotter.truck_routing.services import here_maps
+from spotter.vehicle_routing.models import GasStation
+from spotter.vehicle_routing.serializers import GasStationSerializer
+from spotter.vehicle_routing.services import google_maps_service
 
 
 def get_routing_data(
@@ -19,7 +19,7 @@ def get_routing_data(
     :return: map data
     """
     # Get map information (assumes truck transport mode)
-    map_info = here_maps.get_route(
+    map_info = google_maps_service.get_route(
         start_coordinates={
             "latitude": origin_lat,
             "longitude": origin_lng,
@@ -28,7 +28,7 @@ def get_routing_data(
     )[0]
 
     # Get list of all gas stations along the route (already sorted wrt to distance prop)
-    gas_stations_map_data = here_maps.get_gas_stations_along_route(
+    gas_stations_map_data = google_maps_service.get_gas_stations_along_route(
         start_coordinates={"latitude": origin_lat, "longitude": origin_lng},
         route=map_info["polyline"],
     )
@@ -63,12 +63,12 @@ def get_routing_data(
     optimal_stops = []
     for rf_stop in refuelling_stops:
         opt_stop = (
-            TruckStop.objects.filter(refuelling_stops[rf_stop])
+            GasStation.objects.filter(refuelling_stops[rf_stop])
             .order_by("litre_retail_price")
             .first()
         )
         optimal_stops.append(opt_stop)
-    optimal_stops_data = TruckStopSerializer(instance=optimal_stops, many=True).data
+    optimal_stops_data = GasStationSerializer(instance=optimal_stops, many=True).data
     data = {"map_info": map_info, "gas_station_stops": optimal_stops_data}
 
     return data

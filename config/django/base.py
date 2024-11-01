@@ -32,7 +32,7 @@ ALLOWED_HOSTS = []
 
 # Application definition
 LOCAL_APPS = [
-    "spotter.truck_routing.apps.TruckRoutingConfig",
+    "spotter.vehicle_routing.apps.VehicleRoutingConfig",
     "spotter.core.apps.CoreConfig",
 ]
 

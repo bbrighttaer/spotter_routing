@@ -7,8 +7,8 @@ from django.core.management import BaseCommand
 from requests import HTTPError
 
 from spotter.core.exceptions import ApplicationError
-from spotter.truck_routing.models import TruckStop
-from spotter.truck_routing.services import here_maps
+from spotter.vehicle_routing.models import GasStation
+from spotter.vehicle_routing.services import google_maps_service
 
 
 class Command(BaseCommand):
@@ -17,11 +17,11 @@ class Command(BaseCommand):
         sample_data = pd.read_csv(
             os.path.join(
                 settings.BASE_DIR,
-                "spotter/truck_routing/management/commands/fuel-prices.csv",
+                "spotter/vehicle_routing/management/commands/fuel-prices.csv",
             )
         )
 
-        # Attempt geocoding for every truck stop
+        # Attempt geocoding for every gas station
         failed_truck_stops = []
         success_count = 0
         for i, row in tqdm.tqdm(sample_data.iterrows()):
@@ -32,12 +32,12 @@ class Command(BaseCommand):
             retail_price = row["Retail Price"]
 
             # Avoid HTTP calls for existing records
-            if TruckStop.objects.filter(name=truck_stop_name).exists():
+            if GasStation.objects.filter(name=truck_stop_name).exists():
                 continue
 
             # Geocode truck stops and store in DB
             try:
-                map_items = here_maps.geocode(
+                map_items = google_maps_service.geocode(
                     q=f"{truck_stop_name}, {city}, {state_code}"
                 )
             except (HTTPError, ApplicationError) as e:
@@ -65,7 +65,7 @@ class Command(BaseCommand):
 
                 # Record the location if it found
                 if selected_location is not None:
-                    TruckStop.objects.create(
+                    GasStation.objects.create(
                         here_map_id=selected_location["id"],
                         defaults={
                             "name": truck_stop_name,

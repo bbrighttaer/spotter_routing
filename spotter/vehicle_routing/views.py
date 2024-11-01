@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 from spotter.core.exceptions import ApplicationError
 from spotter.core.utils import ValidateWGS84Value
-from spotter.truck_routing.services import truck_routing_service
+from spotter.vehicle_routing.services import vehicle_routing_service
 
 
 class RetrieveRouteAPI(generics.GenericAPIView):
@@ -29,7 +29,7 @@ class RetrieveRouteAPI(generics.GenericAPIView):
             dest_lat, dest_lng = destination.split(",")
 
             # Get routing response from service
-            response = truck_routing_service.get_routing_data(
+            response = vehicle_routing_service.get_routing_data(
                 origin_lat=origin_lat,
                 origin_lng=origin_lng,
                 dest_lat=dest_lat,
