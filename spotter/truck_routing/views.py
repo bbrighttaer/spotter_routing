@@ -17,8 +17,8 @@ class RetrieveRouteAPI(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         try:
             # Get starting and endpoints
-            origin = request.query_params["start"]
-            destination = request.query_params["finish"]
+            origin = request.query_params["start"].replace(" ", "")
+            destination = request.query_params["finish"].replace(" ", "")
 
             # WGS84 format check
             ValidateWGS84Value.is_valid_wgs84(origin)

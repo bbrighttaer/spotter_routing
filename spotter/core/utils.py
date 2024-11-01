@@ -1,6 +1,9 @@
 import re
 from typing import TypedDict, TypeVar
 
+from flexpolyline import decode, encode
+from simplification.cutil import simplify_coords
+
 from spotter.core.exceptions import ApplicationError
 
 
@@ -36,3 +39,9 @@ class ValidateWGS84Value:
                 f"Value {coordinate_string} is not a valid WGS84 value (e.g. 38.889805, -77.009056)"
             )
         return flag
+
+
+def simplify_route(flex_polyline: str, epsilon: float = 0.003) -> str:
+    decoded = decode(flex_polyline)
+    simplified = simplify_coords(decoded, epsilon)
+    return encode(simplified)

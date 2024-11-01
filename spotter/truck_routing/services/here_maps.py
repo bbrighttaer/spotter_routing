@@ -3,9 +3,10 @@ from rest_framework import status
 
 from config.env import env
 from spotter.core.exceptions import ApplicationError
-from spotter.core.utils import WGS84Type
+from spotter.core.utils import WGS84Type, simplify_route
 
 API_KEY = env.str("HERE_MAP_KEY")
+AUTH_TOKEN = env.str("HERE_AUTH_TOKEN")
 
 
 def geocode(q: str, country_code="USA") -> list:
@@ -38,7 +39,7 @@ def geocode(q: str, country_code="USA") -> list:
 
 
 def get_route(
-    start_coordinates: WGS84Type, finish_coordinates: WGS84Type, transport_mode="truck"
+    start_coordinates: WGS84Type, finish_coordinates: WGS84Type, transport_mode="car"
 ) -> list:
     """
     Retrieves the "fast" route for the giving start and finish points using HERE maps.
@@ -68,7 +69,7 @@ def get_route(
 
     if response.ok:
         response_data = response.json()
-        return response_data["sections"]
+        return response_data["routes"][0]["sections"]
 
     if status.is_client_error(response.status_code):
         error_data = response.json()
@@ -82,7 +83,7 @@ def get_route(
 
 
 def get_gas_stations_along_route(
-    start_coordinates: WGS84Type, route: str, width=2000
+    start_coordinates: WGS84Type, route: str, width=5000
 ) -> list:
     """
     Retrieves all gas stations along the given route.
@@ -95,15 +96,19 @@ def get_gas_stations_along_route(
     # Make a GET request to retrieve map data
     start_lat = start_coordinates["latitude"]
     dest_lng = start_coordinates["longitude"]
+    simplified_route = simplify_route(route)
     response = requests.get(
         url="https://discover.search.hereapi.com/v1/discover",
         params={
             "at": f"{start_lat},{dest_lng}",
-            "route": f"{route};w={width}",
             "q": "Gas Station",
-            "in": "countryCode:USA",
+            # "in": "countryCode:USA",
             "apiKey": API_KEY,
+            "route": f"{simplified_route};w={width}",
         },
+        # headers={
+        #     "Authorization": f"Bearer {AUTH_TOKEN}"
+        # }
     )
 
     if response.ok:
@@ -111,7 +116,10 @@ def get_gas_stations_along_route(
         return response_data["items"]
 
     if status.is_client_error(response.status_code):
-        error_data = response.json()
+        try:
+            error_data = response.json()
+        except Exception:
+            raise ApplicationError(response.content.decode("utf-8"))
         raise ApplicationError(
             message=error_data.get("cause") or error_data.get("error"),
             extra=error_data.get("code"),
