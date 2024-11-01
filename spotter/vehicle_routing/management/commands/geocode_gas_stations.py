@@ -24,7 +24,7 @@ class Command(BaseCommand):
         # Attempt geocoding for every gas station
         failed_truck_stops = []
         success_count = 0
-        for i, row in tqdm.tqdm(sample_data.iterrows()):
+        for i, row in tqdm.tqdm(sample_data.iterrows(), total=sample_data.shape[0]):
             truck_stop_name = row["Truckstop Name"]
             address = row["Address"]
             city = row["City"]
@@ -44,40 +44,42 @@ class Command(BaseCommand):
                 failed_truck_stops.append((truck_stop_name, str(e)))
             else:
                 selected_location = None
-                highest_query_score = 0
                 for location in map_items:
-                    # Consider only places
-                    if location["resultType"] != "place":
-                        continue
-
                     # Ensure place is a gas station
-                    can_consider = False
-                    for cat in location["categories"]:
-                        if cat["name"].lower() == "gas station":
-                            can_consider = True
-                            break
-
-                    # Get the result with the highest confidence
-                    query_score = location["scoring"]["queryScore"]
-                    if can_consider and query_score > highest_query_score:
+                    if "gas_station" in location["types"]:
                         selected_location = location
-                        highest_query_score = query_score
+                        break
 
                 # Record the location if it found
                 if selected_location is not None:
+                    # Get state and postcode
+                    state = ""
+                    postcode = ""
+                    for component in selected_location["address_components"]:
+                        if "administrative_area_level_1" in component["types"]:
+                            state = component["long_name"]
+                        elif "postal_code" in component["types"]:
+                            postcode = component["long_name"]
+                        if state and postcode:
+                            break
+
+                    # Add to DB
                     GasStation.objects.create(
-                        here_map_id=selected_location["id"],
-                        defaults={
-                            "name": truck_stop_name,
-                            "address": address,
-                            "city": city,
-                            "state": selected_location["address"]["state"],
-                            "state_code": state_code,
-                            "postal_code": selected_location["address"]["postalCode"],
-                            "position_latitude": selected_location["position"]["lat"],
-                            "position_longitude": selected_location["position"]["lng"],
-                            "litre_retail_price": retail_price,
-                        },
+                        urn=selected_location["place_id"],
+                        name=truck_stop_name,
+                        street_address=address,
+                        formatted_address=selected_location["formatted_address"],
+                        city=city,
+                        state=state,
+                        state_code=state_code,
+                        postal_code=postcode,
+                        position_latitude=selected_location["geometry"]["location"][
+                            "lat"
+                        ],
+                        position_longitude=selected_location["geometry"]["location"][
+                            "lng"
+                        ],
+                        litre_retail_price=retail_price,
                     )
                     success_count += 1
                 else:

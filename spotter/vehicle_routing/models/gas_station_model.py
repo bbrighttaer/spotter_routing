@@ -7,7 +7,8 @@ class GasStation(models.Model):
     """
 
     name = models.CharField(max_length=255)
-    address = models.CharField(max_length=255)
+    street_address = models.CharField(max_length=255)
+    formatted_address = models.CharField(max_length=255)
     city = models.CharField(max_length=255)
     state = models.CharField(max_length=255)
     state_code = models.CharField(max_length=3)

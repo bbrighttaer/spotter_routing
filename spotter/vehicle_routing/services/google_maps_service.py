@@ -23,7 +23,7 @@ def geocode(q: str) -> list:
 
     if response.ok:
         response_data = response.json()
-        return response_data["items"]
+        return response_data["results"]
 
     if status.is_client_error(response.status_code):
         error_data = response.json()
