@@ -79,7 +79,7 @@ class Command(BaseCommand):
                         position_longitude=selected_location["geometry"]["location"][
                             "lng"
                         ],
-                        litre_retail_price=retail_price,
+                        liter_price=retail_price,
                     )
                     success_count += 1
                 else:

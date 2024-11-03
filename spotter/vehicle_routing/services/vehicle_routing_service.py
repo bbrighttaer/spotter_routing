@@ -1,74 +1,118 @@
+import random
 from collections import defaultdict
 
 from spotter.core import constants
+from spotter.core.exceptions import ApplicationError
 from spotter.vehicle_routing.models import GasStation
 from spotter.vehicle_routing.serializers import GasStationSerializer
 from spotter.vehicle_routing.services import google_maps_service
 
 
-def get_routing_data(
-    origin_lat: float, origin_lng: float, dest_lat: float, dest_lng: float
-):
+def get_routing_data(origin, destination, is_wgs84=False):
     """
     Return routing data and gas station stops along the route specified by the positions provided.
 
-    :param origin_lat: starting point's latitude value
-    :param origin_lng: starting point's longitude value
-    :param dest_lat: destination point's latitude value
-    :param dest_lng: destination point's longitude value
-    :return: map data
+    Arguments:
+    :param origin: The origin of the trip, either a free-text address or in WGS84 format.
+                   The format of origin and destination should be the same.
+    :param destination: The destination of the trip, either a free-text address or in WGS84 format.
+                   The format of origin and destination should be the same.
+    :param is_wgs84: Indicates whether the origin and destination values are in WGS84 coordinate format.
+    :return: map data with gas stops.
     """
     # Get map information (assumes truck transport mode)
-    map_info = google_maps_service.get_route(
-        start_coordinates={
-            "latitude": origin_lat,
-            "longitude": origin_lng,
-        },
-        finish_coordinates={"latitude": dest_lat, "longitude": dest_lng},
-    )[0]
+    map_info = _get_map_info(origin, destination, is_wgs84)
+    trip = map_info["legs"][
+        0
+    ]  # only one leg is expected between origin and destination
+    trip_polyline = map_info["polyline"]["encodedPolyline"]
+    trip_distance_in_meters = map_info["distanceMeters"]
 
     # Get list of all gas stations along the route (already sorted wrt to distance prop)
-    gas_stations_map_data = google_maps_service.get_gas_stations_along_route(
-        start_coordinates={"latitude": origin_lat, "longitude": origin_lng},
-        route=map_info["polyline"],
+    gas_stations_info = google_maps_service.get_gas_stations_along_route(
+        polyline=trip_polyline
     )
 
-    # Helper vars
-    route_length = map_info["summary"]["length"]
-    total_num_stops = route_length // constants.REFUELING_RANGE_IN_METERS
-    refuelling_stops = defaultdict(list)
-    marker = 0
+    # Refuelling consideration is set to start midway through the max range
+    refuelling_range_in_meters = constants.MAXIMUM_RANGE_IN_METERS // 2
 
     # Distance and refuelling tracking variables
-    offset = constants.REFUELING_RANGE_IN_METERS
-    limit = constants.MAXIMUM_RANGE_IN_METERS - constants.REFUELING_RANGE_IN_METERS
+    offset = refuelling_range_in_meters
+    limit = constants.MAXIMUM_RANGE_IN_METERS
+    total_num_stops = trip_distance_in_meters // refuelling_range_in_meters
+    refuelling_stops = defaultdict(list)
+    marker = 0
+    stops_found = 0
 
     # Determine stops
+    stations_list = list(gas_stations_info.values())
     for i in range(total_num_stops):
         # Use marker to avoid repetitive evaluations
-        for gas_station in gas_stations_map_data[marker:]:
-            if offset <= gas_station["distance"] <= offset + limit:
+        for gas_station in stations_list[marker:]:
+            if offset <= gas_station["distance"] < limit:
                 refuelling_stops[i].append(gas_station["id"])
+                stops_found += 1
             marker += 1
 
-            # Check if next stop marker should be updated
-            if (
-                marker < len(gas_stations_map_data)
-                and gas_stations_map_data[marker]["distance"] > offset + limit
-            ):
+            # Check if next stop marker should be updated (at least one gas stop should have been found)
+            if gas_station["distance"] >= limit:
+                if stops_found == 0:
+                    raise ApplicationError(f"No gas stops found in leg {i + 1}")
+                stops_found = 0
                 break
-        offset += constants.REFUELING_RANGE_IN_METERS
+        offset += refuelling_range_in_meters
+        limit += constants.MAXIMUM_RANGE_IN_METERS
 
     # Prepare data
-    optimal_stops = []
+    gas_stops = []
     for rf_stop in refuelling_stops:
+        leg_stops = refuelling_stops[rf_stop]
+        # Try getting gas stations from the DB
         opt_stop = (
-            GasStation.objects.filter(refuelling_stops[rf_stop])
-            .order_by("litre_retail_price")
-            .first()
+            GasStation.objects.filter(urn__in=leg_stops).order_by("liter_price").first()
         )
-        optimal_stops.append(opt_stop)
-    optimal_stops_data = GasStationSerializer(instance=optimal_stops, many=True).data
-    data = {"map_info": map_info, "gas_station_stops": optimal_stops_data}
+
+        # If the gas station is known, select the optimal one based on the liter price
+        if opt_stop is not None:
+            gas_station_data = GasStationSerializer(instance=opt_stop).data
+            gas_station_data["distance"] = gas_stations_info[opt_stop.urn]["distance"]
+            gas_stops.append(gas_station_data)
+        else:
+            # if the station is not known, select one at random from the list returned
+            rnd_stop = random.choice(leg_stops)
+            gas_stops.append(gas_stations_info[rnd_stop])
+    data = {
+        "map": trip,
+        "gas_station_stops": gas_stops,
+    }
 
     return data
+
+
+def _get_map_info(origin, destination, is_wgs84):
+    if is_wgs84:
+        origin_lat, origin_lng = origin.split(",")
+        dest_lat, dest_lng = destination.split(",")
+        map_info = google_maps_service.get_route(
+            origin={
+                "location": {
+                    "latLng": {
+                        "latitude": float(origin_lat),
+                        "longitude": float(origin_lng),
+                    }
+                }
+            },
+            destination={
+                "location": {
+                    "latLng": {
+                        "latitude": float(dest_lat),
+                        "longitude": float(dest_lng),
+                    }
+                }
+            },
+        )
+    else:
+        map_info = google_maps_service.get_route(
+            origin={"address": origin}, destination={"address": destination}
+        )
+    return map_info

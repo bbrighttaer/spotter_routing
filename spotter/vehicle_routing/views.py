@@ -17,29 +17,24 @@ class RetrieveRouteAPI(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         try:
             # Get starting and endpoints
-            origin = request.query_params["start"].replace(" ", "")
-            destination = request.query_params["finish"].replace(" ", "")
+            origin = request.query_params["start"]
+            destination = request.query_params["finish"]
 
-            # WGS84 format check
-            ValidateWGS84Value.is_valid_wgs84(origin)
-            ValidateWGS84Value.is_valid_wgs84(destination)
+            # Check if WGS84 format should be used for processing origin and destination values.
+            use_wgs84 = request.query_params.get("wgs84", "false").lower() == "true"
 
-            # Get latitude and longitude components
-            origin_lat, origin_lng = origin.split(",")
-            dest_lat, dest_lng = destination.split(",")
+            if use_wgs84:
+                # WGS84 format check
+                origin = origin.replace(" ", "")
+                destination = destination.replace(" ", "")
+                ValidateWGS84Value.is_valid_wgs84(origin)
+                ValidateWGS84Value.is_valid_wgs84(destination)
 
             # Get routing response from service
             response = vehicle_routing_service.get_routing_data(
-                origin_lat=origin_lat,
-                origin_lng=origin_lng,
-                dest_lat=dest_lat,
-                dest_lng=dest_lng,
+                origin, destination, is_wgs84=use_wgs84
             )
 
             return Response(response)
-        except KeyError:
-            raise ApplicationError("start and finish parameter values are required")
-        except ValueError:
-            raise ApplicationError(
-                "start and finish parameter values should each be in WGS84 format"
-            )
+        except Exception as e:
+            raise ApplicationError(f"Error: {str(e)}")
