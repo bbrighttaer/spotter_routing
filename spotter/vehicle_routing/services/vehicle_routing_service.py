@@ -65,25 +65,42 @@ def get_routing_data(origin, destination, is_wgs84=False):
 
     # Prepare data
     gas_stops = []
+    prev_dist = 0
+    fuel_cost = 0
     for rf_stop in refuelling_stops:
         leg_stops = refuelling_stops[rf_stop]
         # Try getting gas stations from the DB
         opt_stop = (
-            GasStation.objects.filter(urn__in=leg_stops).order_by("liter_price").first()
+            GasStation.objects.filter(urn__in=leg_stops)
+            .order_by("retail_price")
+            .first()
         )
 
         # If the gas station is known, select the optimal one based on the liter price
         if opt_stop is not None:
             gas_station_data = GasStationSerializer(instance=opt_stop).data
-            gas_station_data["distance"] = gas_stations_info[opt_stop.urn]["distance"]
+            selected_gas_station_data = gas_stations_info[opt_stop.urn]
+            gas_station_data["distance"] = selected_gas_station_data["distance"]
+            retail_price = opt_stop.retail_price
             gas_stops.append(gas_station_data)
         else:
             # if the station is not known, select one at random from the list returned
             rnd_stop = random.choice(leg_stops)
-            gas_stops.append(gas_stations_info[rnd_stop])
+            selected_gas_station_data = gas_stations_info[rnd_stop]
+            retail_price = constants.DEFAULT_PRICE_PER_LITER
+            gas_stops.append(selected_gas_station_data)
+
+        # Calculate fuel amount for this leg
+        gallons_consumed = (
+            selected_gas_station_data["distance"] - prev_dist
+        ) / constants.METERS_PER_GALLON
+        fuel_cost += gallons_consumed * retail_price
+        prev_dist = selected_gas_station_data["distance"]
+
     data = {
         "map": trip,
         "gas_station_stops": gas_stops,
+        "fuel_cost": round(fuel_cost, 2),
     }
 
     return data

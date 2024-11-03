@@ -16,7 +16,7 @@ class GasStation(models.Model):
     position_latitude = models.FloatField()
     position_longitude = models.FloatField()
     urn = models.CharField(max_length=255)
-    liter_price = models.FloatField()
+    retail_price = models.FloatField()
 
     class Meta:
         indexes = [models.Index(fields=["urn"])]
