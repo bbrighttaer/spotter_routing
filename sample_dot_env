@@ -1,0 +1,18 @@
+# local
+DATABASE_URL=postgresql://postgres:admin@localhost:5432/spotter_vr_db
+
+DJANGO_SECRET_KEY=...
+
+# HERE map credentials
+HERE_MAP_ID=...
+HERE_MAP_KEY=...
+HERE_AUTH_TOKEN=..
+
+# Google map credentials
+GOOGLE_API_KEY=...
+
+DEFAULT_PRICE_PER_LITER=3.498974
+METERS_PER_GALLON=16093.4
+
+# Maximum range the vehicle can travel (500 miles)
+MAXIMUM_RANGE_IN_METERS=804672
